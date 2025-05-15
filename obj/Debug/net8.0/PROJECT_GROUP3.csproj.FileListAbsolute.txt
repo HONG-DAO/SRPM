@@ -1,0 +1,15 @@
+/home/hongdao/Documents/Project_Group3/NCKH_BE/bin/Debug/net8.0/PROJECT_GROUP3
+/home/hongdao/Documents/Project_Group3/NCKH_BE/bin/Debug/net8.0/PROJECT_GROUP3.deps.json
+/home/hongdao/Documents/Project_Group3/NCKH_BE/bin/Debug/net8.0/PROJECT_GROUP3.runtimeconfig.json
+/home/hongdao/Documents/Project_Group3/NCKH_BE/bin/Debug/net8.0/PROJECT_GROUP3.dll
+/home/hongdao/Documents/Project_Group3/NCKH_BE/bin/Debug/net8.0/PROJECT_GROUP3.pdb
+/home/hongdao/Documents/Project_Group3/NCKH_BE/obj/Debug/net8.0/PROJECT_GROUP3.GeneratedMSBuildEditorConfig.editorconfig
+/home/hongdao/Documents/Project_Group3/NCKH_BE/obj/Debug/net8.0/PROJECT_GROUP3.AssemblyInfoInputs.cache
+/home/hongdao/Documents/Project_Group3/NCKH_BE/obj/Debug/net8.0/PROJECT_GROUP3.AssemblyInfo.cs
+/home/hongdao/Documents/Project_Group3/NCKH_BE/obj/Debug/net8.0/PROJECT_GROUP3.csproj.CoreCompileInputs.cache
+/home/hongdao/Documents/Project_Group3/NCKH_BE/obj/Debug/net8.0/PROJECT_GROUP3.sourcelink.json
+/home/hongdao/Documents/Project_Group3/NCKH_BE/obj/Debug/net8.0/PROJECT_GROUP3.dll
+/home/hongdao/Documents/Project_Group3/NCKH_BE/obj/Debug/net8.0/refint/PROJECT_GROUP3.dll
+/home/hongdao/Documents/Project_Group3/NCKH_BE/obj/Debug/net8.0/PROJECT_GROUP3.pdb
+/home/hongdao/Documents/Project_Group3/NCKH_BE/obj/Debug/net8.0/PROJECT_GROUP3.genruntimeconfig.cache
+/home/hongdao/Documents/Project_Group3/NCKH_BE/obj/Debug/net8.0/ref/PROJECT_GROUP3.dll
