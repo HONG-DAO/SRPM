@@ -12,11 +12,17 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Configure Swagger (always enabled)
+// ✅ Cấu hình Swagger (KHÔNG gắn cố định IP/domain)
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "SRPM API", Version = "v1" });
+
+    // ❌ Đã xóa AddServer cố định để Swagger tự nhận domain hiện tại
+
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT Authorization header using the Bearer scheme",
@@ -25,6 +31,7 @@ builder.Services.AddSwaggerGen(c =>
         Type = SecuritySchemeType.ApiKey,
         Scheme = "Bearer"
     });
+
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
@@ -92,7 +99,7 @@ builder.Services.AddScoped<IEvaluationService, EvaluationService>();
 builder.Services.AddScoped<IResearchTopicService, ResearchTopicService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 
-// Add CORS
+// CORS để FE truy cập
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecificOrigin",
@@ -103,11 +110,11 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Always enable Swagger
+// Swagger luôn bật
 app.UseSwagger();
 app.UseSwaggerUI();
 
-// Optional: comment out HTTPS redirection if not needed
+// Không ép HTTPS nếu không cần
 // app.UseHttpsRedirection();
 
 app.UseCors("AllowSpecificOrigin");
@@ -115,11 +122,12 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// Automatically apply migrations
+// Apply migration tự động khi khởi động
 using (var scope = app.Services.CreateScope())
 {
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     dbContext.Database.Migrate();
 }
 
-app.Run();
+// ✅ Cho phép truy cập từ mọi địa chỉ (dùng với ngrok)
+app.Run("http://0.0.0.0:5001");

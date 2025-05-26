@@ -25,4 +25,8 @@ namespace SRPM.API.Models
         public UserDto? User { get; set; }
         public string? Message { get; set; }
     }
+    public class SendOtpRequest
+    {
+        public string Email { get; set; } = string.Empty;
+    }
 }
