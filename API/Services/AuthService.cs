@@ -19,10 +19,13 @@ namespace SRPM.API.Services
         private readonly IUserRepository _userRepository;
         private readonly IConfiguration _configuration;
         private readonly ApplicationDbContext _dbContext;
-        // public AuthService(ApplicationDbContext dbContext)
-        // {
-        //     _dbContext = dbContext;
-        // }
+        
+        public AuthService(IUserRepository userRepository, IConfiguration configuration, ApplicationDbContext dbContext)
+        {
+            _userRepository = userRepository;
+            _configuration = configuration;
+            _dbContext = dbContext;
+        }
         public AuthService(IUserRepository userRepository, IConfiguration configuration)
         {
             _userRepository = userRepository;
@@ -331,6 +334,72 @@ namespace SRPM.API.Services
             {
                 Success = true,
                 Message = "OTP has been sent to your email (mocked)."
+            };
+        }
+        public async Task<AuthResponse> SendPasswordResetEmailAsync(string email)
+        {
+            var user = await _userRepository.GetByEmailAsync(email);
+            if (user == null)
+            {
+                return new AuthResponse
+                {
+                    Success = false,
+                    Message = "Email not found."
+                };
+            }
+
+            // Tạo token reset, ví dụ token là GUID
+            var token = Guid.NewGuid().ToString();
+
+            // Lưu token vào DB trong User entity hoặc tạo bảng PasswordResetTokens (ở đây đơn giản update User)
+            user.PasswordResetToken = token;
+            user.PasswordResetTokenExpiry = DateTime.UtcNow.AddHours(1); // token có hiệu lực 1 giờ
+            await _dbContext.SaveChangesAsync();
+
+            // Gửi email token (bạn cần implement dịch vụ gửi mail, hoặc mock như SendOtpForRegisterAsync)
+            Console.WriteLine($"[ResetPasswordToken] Sent to {email}: {token}");
+
+            return new AuthResponse
+            {
+                Success = true,
+                Message = "Password reset email has been sent. Please check your inbox."
+            };
+        }
+        public async Task<AuthResponse> ResetPasswordAsync(string token, string newPassword)
+        {
+            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.PasswordResetToken == token);
+
+            if (user == null || user.PasswordResetTokenExpiry < DateTime.UtcNow)
+            {
+                return new AuthResponse
+                {
+                    Success = false,
+                    Message = "Invalid or expired reset token."
+                };
+            }
+
+            if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 6)
+            {
+                return new AuthResponse
+                {
+                    Success = false,
+                    Message = "Password must be at least 6 characters long."
+                };
+            }
+
+            // Tạo hash mật khẩu mới
+            user.PasswordHash = CreatePasswordHash(newPassword);
+
+            // Xóa token sau khi reset
+            user.PasswordResetToken = null;
+            user.PasswordResetTokenExpiry = null;
+
+            await _dbContext.SaveChangesAsync();
+
+            return new AuthResponse
+            {
+                Success = true,
+                Message = "Password has been reset successfully."
             };
         }
 

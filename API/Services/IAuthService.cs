@@ -12,5 +12,7 @@ namespace SRPM.API.Services
         Task<AuthResponse> LoginWithGoogleAsync(GoogleLoginRequest request);
         Task<AuthResponse> VerifyEmailAsync(VerifyEmailRequest request);
         Task<AuthResponse> SendOtpForRegisterAsync(SendOtpRequest request);
+        Task<AuthResponse> SendPasswordResetEmailAsync(string email);
+        Task<AuthResponse> ResetPasswordAsync(string token, string newPassword);
     }
 }
