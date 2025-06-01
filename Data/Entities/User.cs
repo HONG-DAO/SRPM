@@ -16,7 +16,7 @@ namespace SRPM.Data.Entities
         public string Name { get; set; }
 
         [Required]
-        public string PasswordHash { get; set; }
+        public string? PasswordHash { get; set; }
 
         [MaxLength(255)]
         public string? AvatarUrl { get; set; }

@@ -11,6 +11,7 @@ using System.Text.RegularExpressions;
 using Task = System.Threading.Tasks.Task;
 using Google.Apis.Auth; 
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace SRPM.API.Services
 {
@@ -19,17 +20,16 @@ namespace SRPM.API.Services
         private readonly IUserRepository _userRepository;
         private readonly IConfiguration _configuration;
         private readonly ApplicationDbContext _dbContext;
-        
+        public interface IGoogleAuthService
+        {
+            string GetGoogleAuthUrl(string action);
+            Task<AuthResponse> HandleGoogleCallbackAsync(string code, string action);
+        }
         public AuthService(IUserRepository userRepository, IConfiguration configuration, ApplicationDbContext dbContext)
         {
             _userRepository = userRepository;
             _configuration = configuration;
             _dbContext = dbContext;
-        }
-        public AuthService(IUserRepository userRepository, IConfiguration configuration)
-        {
-            _userRepository = userRepository;
-            _configuration = configuration;
         }
 
         public async Task<AuthResponse> LoginAsync(LoginRequest request)
@@ -92,7 +92,7 @@ namespace SRPM.API.Services
                 return new AuthResponse
                 {
                     Success = false,
-                    Message = "User with this email already exists."
+                    Message = "Người dùng tồn tại"
                 };
             }
 
@@ -235,10 +235,11 @@ namespace SRPM.API.Services
         public async Task<AuthResponse> LoginWithGoogleAsync(GoogleLoginRequest request)
         {
             var payload = await VerifyGoogleTokenAsync(request.GoogleToken);
-            if (payload == null || !payload.Email.EndsWith("@fe.edu.vn"))
+            if (payload == null)
             {
-                return new AuthResponse { Success = false, Message = "Invalid Google account." };
+                return new AuthResponse { Success = false, Message = "Invalid Google token." };
             }
+
 
             var user = await _userRepository.GetByEmailAsync(payload.Email);
             if (user == null)
@@ -247,7 +248,8 @@ namespace SRPM.API.Services
                 user = new User
                 {
                     Email = payload.Email,
-                    Name = payload.Name
+                    Name = payload.Name,
+                    PasswordHash = string.Empty
                 };
                 await _userRepository.CreateAsync(user);
                 await _userRepository.AddUserRoleAsync(user.Id, 4); // Researcher
@@ -286,122 +288,28 @@ namespace SRPM.API.Services
                 return null;
             }
         }
-        public async Task<AuthResponse> VerifyEmailAsync(VerifyEmailRequest request)
-        {
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Email == request.Email);
-            if (user == null)
-            {
-                return new AuthResponse
-                {
-                    Success = false,
-                    Message = "User not found"
-                };
-            }
-
-            if (user.VerificationCode != request.VerificationCode)
-            {
-                return new AuthResponse
-                {
-                    Success = false,
-                    Message = "Invalid verification code"
-                };
-            }
-
-            user.IsEmailVerified = true;
-            user.VerificationCode = null;
-            await _dbContext.SaveChangesAsync();
-
-            return new AuthResponse
-            {
-                Success = true,
-                Message = "Email verified successfully"
-            };
-        }
-        public async Task<AuthResponse> SendOtpForRegisterAsync(SendOtpRequest request)
-        {
-            // Dummy logic nếu chưa dùng MailKit:
-            if (string.IsNullOrWhiteSpace(request.Email))
-            {
-                return new AuthResponse { Success = false, Message = "Email is required." };
-            }
-
-            var otp = new Random().Next(100000, 999999).ToString();
-            Console.WriteLine($"[OTP] Sending to {request.Email}: {otp}");
-
-            // TODO: Lưu otp vào cache và gửi email bằng MailKit sau khi cài được package
-
-            return new AuthResponse
-            {
-                Success = true,
-                Message = "OTP has been sent to your email (mocked)."
-            };
-        }
-        public async Task<AuthResponse> SendPasswordResetEmailAsync(string email)
+        public async Task<UserDto?> GetUserByEmailAsync(string email)
         {
             var user = await _userRepository.GetByEmailAsync(email);
             if (user == null)
+                return null;
+
+            var roles = await _userRepository.GetUserRolesAsync(user.Id);
+            
+            return new UserDto
             {
-                return new AuthResponse
-                {
-                    Success = false,
-                    Message = "Email not found."
-                };
-            }
-
-            // Tạo token reset, ví dụ token là GUID
-            var token = Guid.NewGuid().ToString();
-
-            // Lưu token vào DB trong User entity hoặc tạo bảng PasswordResetTokens (ở đây đơn giản update User)
-            user.PasswordResetToken = token;
-            user.PasswordResetTokenExpiry = DateTime.UtcNow.AddHours(1); // token có hiệu lực 1 giờ
-            await _dbContext.SaveChangesAsync();
-
-            // Gửi email token (bạn cần implement dịch vụ gửi mail, hoặc mock như SendOtpForRegisterAsync)
-            Console.WriteLine($"[ResetPasswordToken] Sent to {email}: {token}");
-
-            return new AuthResponse
-            {
-                Success = true,
-                Message = "Password reset email has been sent. Please check your inbox."
+                Id = user.Id,
+                Email = user.Email,
+                Name = user.Name,
+                AvatarUrl = user.AvatarUrl,
+                BackgroundUrl = user.BackgroundUrl,
+                SocialLinks = string.IsNullOrEmpty(user.SocialLinks) 
+                    ? new List<string>() 
+                    : JsonSerializer.Deserialize<List<string>>(user.SocialLinks) ?? new List<string>(),
+                Roles = roles.Select(r => r.Name).ToList(),
+                IsGoogleUser = string.IsNullOrEmpty(user.PasswordHash), // Giữ nguyên nếu dùng empty string
+                CreatedAt = user.CreatedAt
             };
         }
-        public async Task<AuthResponse> ResetPasswordAsync(string token, string newPassword)
-        {
-            var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.PasswordResetToken == token);
-
-            if (user == null || user.PasswordResetTokenExpiry < DateTime.UtcNow)
-            {
-                return new AuthResponse
-                {
-                    Success = false,
-                    Message = "Invalid or expired reset token."
-                };
-            }
-
-            if (string.IsNullOrWhiteSpace(newPassword) || newPassword.Length < 6)
-            {
-                return new AuthResponse
-                {
-                    Success = false,
-                    Message = "Password must be at least 6 characters long."
-                };
-            }
-
-            // Tạo hash mật khẩu mới
-            user.PasswordHash = CreatePasswordHash(newPassword);
-
-            // Xóa token sau khi reset
-            user.PasswordResetToken = null;
-            user.PasswordResetTokenExpiry = null;
-
-            await _dbContext.SaveChangesAsync();
-
-            return new AuthResponse
-            {
-                Success = true,
-                Message = "Password has been reset successfully."
-            };
-        }
-
     }
 }

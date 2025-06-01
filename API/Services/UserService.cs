@@ -1,6 +1,6 @@
 using SRPM.API.Models;
 using SRPM.Data.Repositories;
-
+using System.Text.Json;
 namespace SRPM.API.Services
 {
     public class UserService : IUserService
@@ -27,7 +27,9 @@ namespace SRPM.API.Services
                 Name = user.Name,
                 AvatarUrl = user.AvatarUrl,
                 BackgroundUrl = user.BackgroundUrl,
-                SocialLinks = user.SocialLinks,
+                SocialLinks = string.IsNullOrEmpty(user.SocialLinks) 
+                ? new List<string>() 
+                : JsonSerializer.Deserialize<List<string>>(user.SocialLinks) ?? new List<string>(),
                 Roles = roles.Select(r => r.Name).ToList()
             };
         }
@@ -48,7 +50,9 @@ namespace SRPM.API.Services
                     Name = user.Name,
                     AvatarUrl = user.AvatarUrl,
                     BackgroundUrl = user.BackgroundUrl,
-                    SocialLinks = user.SocialLinks,
+                    SocialLinks = string.IsNullOrEmpty(user.SocialLinks) 
+                    ? new List<string>() 
+                    : JsonSerializer.Deserialize<List<string>>(user.SocialLinks) ?? new List<string>(),
                     Roles = roles.Select(r => r.Name).ToList()
                 });
             }
@@ -72,7 +76,9 @@ namespace SRPM.API.Services
                     Name = user.Name,
                     AvatarUrl = user.AvatarUrl,
                     BackgroundUrl = user.BackgroundUrl,
-                    SocialLinks = user.SocialLinks,
+                    SocialLinks = string.IsNullOrEmpty(user.SocialLinks) 
+                    ? new List<string>() 
+                    : JsonSerializer.Deserialize<List<string>>(user.SocialLinks) ?? new List<string>(),
                     Roles = roles.Select(r => r.Name).ToList()
                 });
             }
